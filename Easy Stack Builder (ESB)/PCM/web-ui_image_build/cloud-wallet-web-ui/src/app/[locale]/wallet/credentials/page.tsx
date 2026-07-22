@@ -47,26 +47,37 @@ const Wallet = (): JSX.Element => {
     const { credentials, description } = credential;
 
     const decodedEntries: CredentialList[] = await Promise.all(
-      Object.keys(credentials).map(async key => {
-        let decodedCredentials: CredentialData;
+      Object.keys(credentials)
+        // Skip entries that cannot represent a credential (empty keys or
+        // missing payloads have been observed in stored data) so a single
+        // invalid entry does not break the whole overview.
+        .filter(key => key && credentials[key]?.data && credentials[key].data !== 'null')
+        .map(async key => {
+          try {
+            let decodedCredentials: CredentialData;
 
-        if (credentials[key].type === 'vc+sd-jwt') {
-          const decodedCredential = await decodeSdJwt(credentials[key].data, digest);
+            if (credentials[key].type === 'vc+sd-jwt') {
+              const decodedCredential = await decodeSdJwt(credentials[key].data, digest);
 
-          decodedCredentials = {
-            vct: decodedCredential.jwt.payload.vct as string,
-            issuer: decodedCredential.jwt.payload.iss as string,
-            issuanceDate: decodedCredential.jwt.payload.iat as string,
-            credentialSubject: decodedCredential.jwt.payload as Record<string, string>,
-          };
-        } else {
-          decodedCredentials = JSON.parse(credentials[key].data);
-        }
+              decodedCredentials = {
+                vct: decodedCredential.jwt.payload.vct as string,
+                issuer: decodedCredential.jwt.payload.iss as string,
+                issuanceDate: decodedCredential.jwt.payload.iat as string,
+                credentialSubject: decodedCredential.jwt.payload as Record<string, string>,
+              };
+            } else {
+              decodedCredentials = JSON.parse(credentials[key].data);
+            }
 
-        return {
-          [key]: decodedCredentials,
-        };
-      })
+            if (!decodedCredentials) return {};
+
+            return {
+              [key]: decodedCredentials,
+            };
+          } catch {
+            return {};
+          }
+        })
     );
 
     return {
