@@ -39,9 +39,9 @@ pre-authorization-bridge:
       signerJwksUrl: http://signer.NAMESPACE.svc.cluster.local/v1/jwks
       credentialEndpoint: http://signer.NAMESPACE.svc.cluster.local/v1/credential
       key: signerkey
-      namespace: NAMESPACE 
+      namespace: tenant_space
       groupid:
-      issuerKid: "did:web:cloud-wallet.DOMAIN#signerkey"
+      issuerKid: "signerkey"
     wellKnown:
       issuer: https://cloud-wallet.DOMAIN
       token_endpoint: https://cloud-wallet.DOMAIN/token

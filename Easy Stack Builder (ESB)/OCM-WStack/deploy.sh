@@ -725,6 +725,32 @@ helm upgrade --install didcomm "./Didcomm" --namespace "$NAMESPACE" -f "./Didcom
 mv ./Didcomm/values.yaml.bak ./Didcomm/values.yaml
 record_phase "didcomm" "done" "DIDComm connector deployed"
 
+record_phase "normalization" "running" "Normalizing deployments for known chart issues"
+# Some service charts render an imagePullSecrets entry with an empty name when no
+# pull secret is configured. The empty entry breaks later strategic-merge patches
+# against the deployment (kubectl set env / kubectl apply fail with
+# 'map does not contain declared merge key: name'), so drop it where present.
+while read -r deploy; do
+  [ -n "$deploy" ] || continue
+  secret_name="$(kubectl -n "$NAMESPACE" get "$deploy" -o jsonpath='{.spec.template.spec.imagePullSecrets[0].name}' 2>/dev/null)"
+  has_secrets="$(kubectl -n "$NAMESPACE" get "$deploy" -o jsonpath='{.spec.template.spec.imagePullSecrets}' 2>/dev/null)"
+  if [ -n "$has_secrets" ] && [ -z "$secret_name" ]; then
+    kubectl -n "$NAMESPACE" patch "$deploy" --type=json \
+      -p='[{"op":"remove","path":"/spec/template/spec/imagePullSecrets"}]' >/dev/null || true
+  fi
+done < <(kubectl -n "$NAMESPACE" get deploy -o name 2>/dev/null)
+
+# The dummy content signer is a NATS worker without an HTTP server, but its chart
+# probes GET /isAlive. The pod can never become Ready, which wedges rolling
+# updates at maxUnavailable=0 while the replaced pod keeps broadcasting stale
+# issuer metadata over NATS. Drop the probe and allow the old pod to be replaced.
+kubectl -n "$NAMESPACE" patch deploy dummycontentsigner --type=json \
+  -p='[{"op":"remove","path":"/spec/template/spec/containers/0/readinessProbe"}]' >/dev/null 2>&1 || true
+kubectl -n "$NAMESPACE" patch deploy dummycontentsigner --type=merge \
+  -p '{"spec":{"strategy":{"rollingUpdate":{"maxUnavailable":1}}}}' >/dev/null 2>&1 || true
+kubectl -n "$NAMESPACE" rollout status deploy/dummycontentsigner --timeout=3m >/dev/null 2>&1 || true
+record_phase "normalization" "done" "Deployment normalizations applied"
+
 record_phase "smoke-tests" "running" "Verifying ingress, Keycloak connectivity, and stored secrets"
 post_deploy_smoke_checks
 record_phase "smoke-tests" "done" "Smoke checks completed"

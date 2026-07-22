@@ -24,7 +24,7 @@ const AccountButton = (): JSX.Element => {
   const handleSignIn = (): void => {
     keycloak
       .login({
-        redirectUri: `${process.env.ENV_URL ?? 'http://localhost:3000'}/${locale}/wallet/credentials`,
+        redirectUri: `${window.location.origin}/${locale}/wallet/credentials`,
       })
       .catch(setError);
   };

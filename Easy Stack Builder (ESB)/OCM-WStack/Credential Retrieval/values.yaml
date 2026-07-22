@@ -39,7 +39,7 @@ credential-retrieval-service:
     disableTLS: true
     country: DE
     region: EU
-    signerTopic: signer-topic
+    signerTopic: sign
     storageTopic: storage.service.store
     offeringTopic: offering
     offeringPolicy:
