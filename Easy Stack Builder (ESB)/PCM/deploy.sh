@@ -46,6 +46,7 @@ patch_ingress_tls() {
 }
 
 ensure_namespace_baseline() {
+  kubectl get ns "$NAMESPACE" >/dev/null 2>&1 || kubectl create namespace "$NAMESPACE" >/dev/null
   cat <<EOF | kubectl -n "$NAMESPACE" apply -f - >/dev/null
 apiVersion: v1
 kind: ResourceQuota

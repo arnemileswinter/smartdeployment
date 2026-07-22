@@ -1,6 +1,8 @@
 #! /bin/bash
 set -euo pipefail
 
+cd "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # ./deploy.sh pcmnamespace(instacne_name), ocmnamespace, domain, cert_path, key_path, KUBECONFIG
 #               registry_repo, registry_username, registry_password
 
@@ -19,7 +21,7 @@ helm repo add kong https://charts.konghq.com
 helm repo update
 
 export KUBECONFIG="$KUBE"
-kubectl create ns $NAMESPACE
+kubectl create ns $NAMESPACE 2>/dev/null || true
 kubectl create secret tls "${TLS_SECRET}" \
     --cert="${CERT_PATH}" \
     --key="${KEY_PATH}" \
