@@ -46,6 +46,7 @@ patch_ingress_tls() {
 }
 
 ensure_namespace_baseline() {
+  kubectl get ns "$NAMESPACE" >/dev/null 2>&1 || kubectl create namespace "$NAMESPACE" >/dev/null
   cat <<EOF | kubectl -n "$NAMESPACE" apply -f - >/dev/null
 apiVersion: v1
 kind: ResourceQuota
@@ -204,9 +205,7 @@ rollback_on_error() {
   local exit_code="$?"
   if [ "$exit_code" -ne 0 ]; then
     local started="$(date -Iseconds)"
-    emit_event deploy rollback started "$started" "Deployment failed; executing uninstall rollback"
-    bash "$DIR/uninstall.sh" "$NAMESPACE" "$KUBE" "$OCM_NAMESPACE" >/dev/null 2>&1 || true
-    emit_event deploy rollback finished "$started" "Rollback completed"
+    emit_event deploy rollback skipped "$started" "Rollback disabled for local iterative deployment"
   fi
   exit "$exit_code"
 }

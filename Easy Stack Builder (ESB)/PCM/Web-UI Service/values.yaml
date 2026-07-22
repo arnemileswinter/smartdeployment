@@ -5,7 +5,7 @@ frontendContainer:
   imagePullSecret: regcred
   image: REGISTRY_REPO
   tag: custom-webui
-  imagePullPolicy: Always
+  imagePullPolicy: IfNotPresent
   port: 3000
 
 serviceAccount:

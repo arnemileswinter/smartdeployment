@@ -1,6 +1,8 @@
 #! /bin/bash
 set -euo pipefail
 
+cd "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # ./deploy.sh pcmnamespace(instacne_name), ocmnamespace, domain, cert_path, key_path, KUBECONFIG
 #               registry_repo, registry_username, registry_password
 
@@ -19,7 +21,7 @@ helm repo add kong https://charts.konghq.com
 helm repo update
 
 export KUBECONFIG="$KUBE"
-kubectl create ns $NAMESPACE
+kubectl create ns $NAMESPACE 2>/dev/null || true
 kubectl create secret tls "${TLS_SECRET}" \
     --cert="${CERT_PATH}" \
     --key="${KEY_PATH}" \
@@ -204,24 +206,16 @@ kubectl create secret generic keycloak-init-secrets \
   --from-literal=username="${KEYCLOAK_USERNAME}" \
   --dry-run=client -o yaml | kubectl apply -f -
 
-# ---- FIXED DOCKER BUILD & PUSH ----
-# Correct login for Docker Hub
-echo "$REGISTRY_PASSWORD" | docker login -u "$REGISTRY_USERNAME" --password-stdin
-# Replace DOMAIN in .env.production
+# ---- LOCAL DOCKER BUILD (no registry: k8s uses the docker runtime, so a local image is directly usable) ----
 sed -i.bak "s/\<DOMAIN\>/$DOMAIN/g" "./web-ui_image_build/cloud-wallet-web-ui/.env.production"
-# Build with proper tag
 docker build -f "./web-ui_image_build/cloud-wallet-web-ui/deployment/docker/Dockerfile" \
   -t "$REGISTRY_REPO:custom-webui" "./web-ui_image_build/cloud-wallet-web-ui/"
-# Restore .env.production
 mv "./web-ui_image_build/cloud-wallet-web-ui/.env.production.bak" "./web-ui_image_build/cloud-wallet-web-ui/.env.production"
-# Push image
-docker push "$REGISTRY_REPO:custom-webui"
-# K8s secret must use Docker Hub’s canonical server string
 kubectl -n "$NAMESPACE" delete secret regcred 2>/dev/null || true
 kubectl -n "$NAMESPACE" create secret docker-registry regcred \
   --docker-username="$REGISTRY_USERNAME" \
   --docker-password="$REGISTRY_PASSWORD"
-# ---- END FIXED DOCKER BUILD & PUSH ----
+# ---- END LOCAL DOCKER BUILD ----
 
 
 #htpasswd -c auth admin

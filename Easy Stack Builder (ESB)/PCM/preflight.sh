@@ -73,7 +73,6 @@ kubectl --kubeconfig "$KUBE" -n "$OCM_NAMESPACE" get secret postgres-postgresql 
 kubectl --kubeconfig "$KUBE" -n "$OCM_NAMESPACE" get secret vault >/dev/null 2>&1 || fail "required OCM Vault secret is missing"
 
 docker version >/dev/null 2>&1 || fail "docker is not reachable on this host"
-printf '%s' "$REGISTRY_PASSWORD" | docker login -u "$REGISTRY_USERNAME" --password-stdin >/dev/null 2>&1 || fail "docker registry login failed"
-docker logout >/dev/null 2>&1 || true
+# registry login skipped: image is built locally and consumed directly by the docker container runtime
 
 echo "PREFLIGHT_OK=true"

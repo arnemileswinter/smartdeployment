@@ -196,12 +196,7 @@ handle_error() {
   set +e
   record_phase "$LAST_PHASE" "failed" "Deployment failed at line ${line}; starting rollback"
 
-  if [[ "$ROLLBACK_IN_PROGRESS" -eq 0 ]]; then
-    ROLLBACK_IN_PROGRESS=1
-    emit_event "rollback" "running" "Executing uninstall rollback for namespace ${NAMESPACE}"
-    bash "$SCRIPT_DIR/uninstall.sh" "$NAMESPACE" "$KUBE" >/dev/null 2>&1 || true
-    emit_event "rollback" "done" "Rollback completed"
-  fi
+  emit_event "rollback" "skipped" "Rollback disabled for local iterative deployment; namespace ${NAMESPACE} left as-is"
 
   exit "$exit_code"
 }
